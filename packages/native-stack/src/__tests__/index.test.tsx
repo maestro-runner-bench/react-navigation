@@ -257,7 +257,14 @@ test('removes multiple screens on dismiss', async () => {
     </NavigationContainer>
   );
 
-  await act(() => navigation.dispatch(StackActions.remove('B')));
+  await act(() =>
+    navigation.dispatch({
+      ...StackActions.dismiss(),
+      source: navigation
+        .getRootState()
+        ?.routes.find((route) => route.name === 'B')?.key,
+    })
+  );
 
   await act(() => navigation.dispatch(StackActions.push('D')));
 

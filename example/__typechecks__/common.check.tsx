@@ -134,9 +134,7 @@ export const PostDetailsScreen = ({
   expectTypeOf(navigation.push)
     .parameter(0)
     .toEqualTypeOf<keyof RootStackParamList>();
-  expectTypeOf(navigation.remove).parameters.toEqualTypeOf<
-    [screen: keyof RootStackParamList, count?: number | undefined]
-  >();
+  expectTypeOf(navigation.dismiss).parameters.toEqualTypeOf<[]>();
 
   expectTypeOf(navigation.setOptions)
     .parameter(0)

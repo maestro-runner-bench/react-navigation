@@ -493,6 +493,27 @@ export function NativeStackView({ state, navigation, descriptors }: Props) {
   const activeRoutes = state.routes.slice(0, state.index + 1);
   const modalRouteKeys = getModalRouteKeys(activeRoutes, descriptors);
 
+  const onDismiss = (key: string, dismissCount: number) => {
+    const index = activeRoutes.findIndex((route) => route.key === key);
+
+    if (index === -1) {
+      return;
+    }
+
+    const count = Math.min(dismissCount, index + 1, state.index);
+
+    activeRoutes
+      .slice(index - count + 1, index + 1)
+      .reverse()
+      .forEach((route) => {
+        navigation.dispatch({
+          ...StackActions.dismiss(),
+          source: route.key,
+          target: state.key,
+        });
+      });
+  };
+
   return (
     <SafeAreaProviderCompat>
       <ScreenStack style={styles.container}>
@@ -570,16 +591,11 @@ export function NativeStackView({ state, navigation, descriptors }: Props) {
                 });
               }}
               onDismissed={(event) => {
-                navigation.dispatch({
-                  ...StackActions.remove(
-                    route.name,
-                    event.nativeEvent.dismissCount
-                  ),
-                  source: route.key,
-                  target: state.key,
-                });
+                onDismiss(route.key, event.nativeEvent.dismissCount);
 
-                setNextDismissedKey(route.key);
+                if (index <= state.index) {
+                  setNextDismissedKey(route.key);
+                }
               }}
               onHeaderBackButtonClicked={() => {
                 navigation.dispatch({
@@ -589,14 +605,7 @@ export function NativeStackView({ state, navigation, descriptors }: Props) {
                 });
               }}
               onNativeDismissCancelled={(event) => {
-                navigation.dispatch({
-                  ...StackActions.remove(
-                    route.name,
-                    event.nativeEvent.dismissCount
-                  ),
-                  source: route.key,
-                  target: state.key,
-                });
+                onDismiss(route.key, event.nativeEvent.dismissCount);
               }}
               onGestureCancel={() => {
                 navigation.emit({

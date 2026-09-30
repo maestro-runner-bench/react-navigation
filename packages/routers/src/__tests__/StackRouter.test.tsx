@@ -2433,7 +2433,7 @@ test('goes back to matching ID in route history for navigate if pop: true', () =
   });
 });
 
-test('focuses the previous screen when removing the focused screen', () => {
+test('focuses the previous screen when dismissing the focused screen', () => {
   const router = StackRouter({});
 
   const options: RouterConfigOptions = {
@@ -2457,7 +2457,7 @@ test('focuses the previous screen when removing the focused screen', () => {
   };
 
   expect(
-    router.getStateForAction(state, StackActions.remove('qux'), options)
+    router.getStateForAction(state, StackActions.dismiss(), options)
   ).toEqual({
     ...state,
     index: 1,
@@ -2465,7 +2465,7 @@ test('focuses the previous screen when removing the focused screen', () => {
   });
 });
 
-test('removes a screen with params history', () => {
+test('dismisses a screen with params history', () => {
   const router = StackRouter({});
 
   const options: RouterConfigOptions = {
@@ -2508,7 +2508,11 @@ test('removes a screen with params history', () => {
   };
 
   expect(
-    router.getStateForAction(state, StackActions.remove('qux'), options)
+    router.getStateForAction(
+      state,
+      { ...StackActions.dismiss(), source: 'qux' },
+      options
+    )
   ).toEqual({
     ...state,
     index: 2,
@@ -2516,48 +2520,7 @@ test('removes a screen with params history', () => {
   });
 });
 
-test('removes multiple screens with a count', () => {
-  const router = StackRouter({});
-
-  const options: RouterConfigOptions = {
-    routeNames: ['baz', 'bar', 'qux', 'quy'],
-    routeParamList: {},
-    routeGetIdList: {},
-  };
-
-  const state: StackNavigationState<ParamListBase> = {
-    stale: false,
-    type: 'stack',
-    key: 'root',
-    index: 3,
-    retainedRouteKeys: [],
-    routeNames: options.routeNames,
-    routes: [
-      { key: 'baz', name: 'baz' },
-      { key: 'bar', name: 'bar' },
-      {
-        key: 'qux',
-        name: 'qux',
-        params: { count: 3 },
-        history: [
-          { type: 'params', params: { count: 1 } },
-          { type: 'params', params: { count: 2 } },
-        ],
-      },
-      { key: 'quy', name: 'quy' },
-    ],
-  };
-
-  expect(
-    router.getStateForAction(state, StackActions.remove('quy', 2), options)
-  ).toEqual({
-    ...state,
-    index: 1,
-    routes: [state.routes[0], state.routes[1]],
-  });
-});
-
-test("doesn't remove screens above the source on remove with a count", () => {
+test("doesn't dismiss screens above the source", () => {
   const router = StackRouter({});
 
   const options: RouterConfigOptions = {
@@ -2584,76 +2547,17 @@ test("doesn't remove screens above the source on remove with a count", () => {
   expect(
     router.getStateForAction(
       state,
-      { ...StackActions.remove('qux', 2), source: 'qux' },
+      { ...StackActions.dismiss(), source: 'qux' },
       options
     )
   ).toEqual({
     ...state,
-    index: 1,
-    routes: [state.routes[0], state.routes[3]],
-  });
-});
-
-test('keeps one screen when remove count exceeds the number of screens', () => {
-  const router = StackRouter({});
-
-  const options: RouterConfigOptions = {
-    routeNames: ['baz', 'bar', 'qux'],
-    routeParamList: {},
-    routeGetIdList: {},
-  };
-
-  const state: StackNavigationState<ParamListBase> = {
-    stale: false,
-    type: 'stack',
-    key: 'root',
     index: 2,
-    retainedRouteKeys: [],
-    routeNames: options.routeNames,
-    routes: [
-      { key: 'baz', name: 'baz' },
-      { key: 'bar', name: 'bar' },
-      { key: 'qux', name: 'qux' },
-    ],
-  };
-
-  expect(
-    router.getStateForAction(state, StackActions.remove('qux', 5), options)
-  ).toEqual({
-    ...state,
-    index: 0,
-    routes: [state.routes[0]],
+    routes: [state.routes[0], state.routes[1], state.routes[3]],
   });
 });
 
-test("doesn't handle remove if count is less than 1", () => {
-  const router = StackRouter({});
-
-  const options: RouterConfigOptions = {
-    routeNames: ['baz', 'bar'],
-    routeParamList: {},
-    routeGetIdList: {},
-  };
-
-  const state: StackNavigationState<ParamListBase> = {
-    stale: false,
-    type: 'stack',
-    key: 'root',
-    index: 1,
-    retainedRouteKeys: [],
-    routeNames: options.routeNames,
-    routes: [
-      { key: 'baz', name: 'baz' },
-      { key: 'bar', name: 'bar' },
-    ],
-  };
-
-  expect(
-    router.getStateForAction(state, StackActions.remove('bar', 0), options)
-  ).toBeNull();
-});
-
-test('removes the source when several screens have the same name', () => {
+test('dismisses the source when screens share a name', () => {
   const router = StackRouter({});
 
   const options: RouterConfigOptions = {
@@ -2679,7 +2583,7 @@ test('removes the source when several screens have the same name', () => {
   expect(
     router.getStateForAction(
       state,
-      { ...StackActions.remove('bar'), source: 'bar-first' },
+      { ...StackActions.dismiss(), source: 'bar-first' },
       options
     )
   ).toEqual({
@@ -2689,7 +2593,7 @@ test('removes the source when several screens have the same name', () => {
   });
 });
 
-test('removes the last matching screen when the source has a different name', () => {
+test('dismisses the source even when another screen is focused', () => {
   const router = StackRouter({});
 
   const options: RouterConfigOptions = {
@@ -2716,17 +2620,17 @@ test('removes the last matching screen when the source has a different name', ()
   expect(
     router.getStateForAction(
       state,
-      { ...StackActions.remove('bar'), source: 'baz' },
+      { ...StackActions.dismiss(), source: 'baz' },
       options
     )
   ).toEqual({
     ...state,
     index: 2,
-    routes: [state.routes[0], state.routes[1], state.routes[3]],
+    routes: [state.routes[1], state.routes[2], state.routes[3]],
   });
 });
 
-test('removes the first screen when another screen remains', () => {
+test('dismisses the first screen when another screen remains', () => {
   const router = StackRouter({});
 
   const options: RouterConfigOptions = {
@@ -2749,7 +2653,11 @@ test('removes the first screen when another screen remains', () => {
   };
 
   expect(
-    router.getStateForAction(state, StackActions.remove('baz'), options)
+    router.getStateForAction(
+      state,
+      { ...StackActions.dismiss(), source: 'baz' },
+      options
+    )
   ).toEqual({
     ...state,
     index: 0,
@@ -2757,7 +2665,7 @@ test('removes the first screen when another screen remains', () => {
   });
 });
 
-test("doesn't handle remove for the only active screen", () => {
+test("doesn't dismiss the only active screen", () => {
   const router = StackRouter({});
 
   const options: RouterConfigOptions = {
@@ -2780,11 +2688,11 @@ test("doesn't handle remove for the only active screen", () => {
   };
 
   expect(
-    router.getStateForAction(state, StackActions.remove('baz'), options)
+    router.getStateForAction(state, StackActions.dismiss(), options)
   ).toBeNull();
 });
 
-test("doesn't handle remove if the screen isn't in the stack", () => {
+test("doesn't dismiss a source outside the stack", () => {
   const router = StackRouter({});
 
   const options: RouterConfigOptions = {
@@ -2807,11 +2715,15 @@ test("doesn't handle remove if the screen isn't in the stack", () => {
   };
 
   expect(
-    router.getStateForAction(state, StackActions.remove('qux'), options)
+    router.getStateForAction(
+      state,
+      { ...StackActions.dismiss(), source: 'qux' },
+      options
+    )
   ).toBeNull();
 });
 
-test("doesn't handle remove for an inactive screen without its source key", () => {
+test("doesn't dismiss retained and preloaded screens", () => {
   const router = StackRouter({});
 
   const options: RouterConfigOptions = {
@@ -2836,14 +2748,22 @@ test("doesn't handle remove for an inactive screen without its source key", () =
   };
 
   expect(
-    router.getStateForAction(state, StackActions.remove('qux'), options)
+    router.getStateForAction(
+      state,
+      { ...StackActions.dismiss(), source: 'qux' },
+      options
+    )
   ).toBeNull();
   expect(
-    router.getStateForAction(state, StackActions.remove('quy'), options)
+    router.getStateForAction(
+      state,
+      { ...StackActions.dismiss(), source: 'quy' },
+      options
+    )
   ).toBeNull();
 });
 
-test("doesn't handle remove if source key isn't present", () => {
+test("doesn't dismiss when the source key is missing", () => {
   const router = StackRouter({});
 
   const options: RouterConfigOptions = {
@@ -2868,13 +2788,13 @@ test("doesn't handle remove if source key isn't present", () => {
   expect(
     router.getStateForAction(
       state,
-      { ...StackActions.remove('bar'), source: 'child' },
+      { ...StackActions.dismiss(), source: 'child' },
       options
     )
   ).toBeNull();
 });
 
-test('retains removed screens and preserves preloaded screens', () => {
+test('retains dismissed screens and preserves preloaded screens', () => {
   const router = StackRouter({});
 
   const options: RouterConfigOptions = {
@@ -2901,7 +2821,7 @@ test('retains removed screens and preserves preloaded screens', () => {
   expect(
     router.getStateForAction(
       state,
-      { ...StackActions.remove('bar'), source: 'bar' },
+      { ...StackActions.dismiss(), source: 'bar' },
       options
     )
   ).toEqual({
@@ -2916,7 +2836,7 @@ test('retains removed screens and preserves preloaded screens', () => {
   });
 });
 
-test('removes a preloaded screen with a matching name and source key', () => {
+test("doesn't dismiss a preloaded screen", () => {
   const router = StackRouter({});
 
   const options: RouterConfigOptions = {
@@ -2929,29 +2849,26 @@ test('removes a preloaded screen with a matching name and source key', () => {
     stale: false,
     type: 'stack',
     key: 'root',
-    index: 0,
+    index: 1,
     retainedRouteKeys: [],
     routeNames: options.routeNames,
     routes: [
       { key: 'baz', name: 'baz' },
-      { key: 'bar', name: 'bar' },
+      { key: 'bar-active', name: 'bar' },
+      { key: 'bar-preloaded', name: 'bar' },
     ],
   };
 
   expect(
     router.getStateForAction(
       state,
-      { ...StackActions.remove('bar'), source: 'bar' },
+      { ...StackActions.dismiss(), source: 'bar-preloaded' },
       options
     )
-  ).toEqual({
-    ...state,
-    retainedRouteKeys: [],
-    routes: [state.routes[0]],
-  });
+  ).toBeNull();
 });
 
-test('removes a retained screen with a matching name and source key', () => {
+test("doesn't dismiss a retained screen", () => {
   const router = StackRouter({});
 
   const options: RouterConfigOptions = {
@@ -2964,26 +2881,23 @@ test('removes a retained screen with a matching name and source key', () => {
     stale: false,
     type: 'stack',
     key: 'root',
-    index: 0,
-    retainedRouteKeys: ['bar'],
+    index: 1,
+    retainedRouteKeys: ['bar-retained'],
     routeNames: options.routeNames,
     routes: [
       { key: 'baz', name: 'baz' },
-      { key: 'bar', name: 'bar' },
+      { key: 'bar-active', name: 'bar' },
+      { key: 'bar-retained', name: 'bar' },
     ],
   };
 
   expect(
     router.getStateForAction(
       state,
-      { ...StackActions.remove('bar'), source: 'bar' },
+      { ...StackActions.dismiss(), source: 'bar-retained' },
       options
     )
-  ).toEqual({
-    ...state,
-    retainedRouteKeys: [],
-    routes: [state.routes[0]],
-  });
+  ).toBeNull();
 });
 
 test('handles pop action', () => {
