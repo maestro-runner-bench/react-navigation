@@ -8,6 +8,7 @@ on:
       - main
   schedule:
     - cron: '0 4 * * *'
+  workflow_dispatch:
 
 env:
   XCODE_VERSION: '26.3'
@@ -229,25 +230,21 @@ jobs:
           echo "Starting simulator log stream..."
           xcrun simctl spawn booted log stream --style syslog > ~/agent-device-simulator.log 2>&1 &
 
-      - name: Prepare agent-device iOS runner
-        timeout-minutes: 20
-        run: |
-          mkdir -p agent-device-artifacts agent-device-state
-          echo "Preparing agent-device iOS runner..."
-          node ../node_modules/agent-device/bin/agent-device.mjs \
-            prepare ios-runner \
-            --timeout 600000 \
-            --platform ios \
-            --state-dir agent-device-state \
-            --verbose \
-            --no-record \
-            > agent-device-artifacts/ios-prepare.txt
-        working-directory: example
-
       - name: Run E2E tests
         run: |
-          echo "Running native e2e tests..."
-          AGENT_DEVICE_E2E_TIMEOUT_MS=240000 pnpm e2e:native --platform ios
+          set +e
+          mkdir -p agent-device-artifacts
+          curl -fsSL https://open.devicelab.dev/install/maestro-runner | bash -s -- --version 1.1.28
+          MR=$HOME/.maestro-runner/bin/maestro-runner; $MR --version
+          APP_ID=$(node -p 'require("./app.json").expo.ios.bundleIdentifier')
+          APP_SCHEME=$(node -p 'require("./app.json").expo.scheme')://
+          UDID=$(xcrun simctl list devices booted | grep "$SIMULATOR_NAME" | head -n 1 | awk -F "[()]" '{print $2}')
+          # agent-device ran with --retries 3: rerun only the failed flows, up to 3 more times
+          run() { $MR --platform ios --device "$UDID" test -e APP_ID="$APP_ID" -e APP_SCHEME="$APP_SCHEME" --output agent-device-artifacts --flatten "$@" e2e/maestro; }
+          run; rc=$?
+          for i in 1 2 3; do [ $rc = 0 ] && break; echo "retry $i"; run --retry-failed; rc=$?; done
+          cp agent-device-artifacts/junit-report.xml agent-device-artifacts/junit.xml 2>/dev/null || true
+          exit $rc
         working-directory: example
 
       - name: Store E2E output
